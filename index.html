@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SaladFlow - Smart Recipe Costing & Profit Management</title>
+  <title>FIT-HEALT - Smart Recipe Costing & Profit Management</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js -->
@@ -122,7 +122,7 @@
           <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white shadow-md shadow-brand-700/20">
             <i data-lucide="citrus" class="w-5 h-5"></i>
           </div>
-          <span class="text-2xl font-black tracking-tight text-brand-900">SaladFlow</span>
+          <span class="text-2xl font-black tracking-tight text-brand-900">FIT-HEALT</span>
         </div>
 
         <!-- Navigation items list -->
@@ -1237,10 +1237,10 @@
       ]
     };
 
-    let AppState = JSON.parse(localStorage.getItem('SALADFLOW_DATA_V2')) || JSON.parse(JSON.stringify(DEFAULT_APP_STATE));
+    let AppState = JSON.parse(localStorage.getItem('FIT-HEALT_DATA_V2')) || JSON.parse(JSON.stringify(DEFAULT_APP_STATE));
 
     function saveStateToStorage() {
-      localStorage.setItem('SALADFLOW_DATA_V2', JSON.stringify(AppState));
+      localStorage.setItem('FIT-HEALT_DATA_V2', JSON.stringify(AppState));
     }
 
     function resetDataToDefault() {
