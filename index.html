@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SaladFlow - Smart Recipe Costing & Profit Management</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#F0FDF4',
+              100: '#DCFCE7',
+              200: '#BBF7D0',
+              300: '#86EFAC',
+              400: '#4ADE80',
+              500: '#22C55E',
+              600: '#16A34A',
+              700: '#15803D',
+              800: '#166534',
+              900: '#0F3E22',
+              dark: '#082815',
+            },
+            surface: {
+              card: '#FFFFFF',
+              sidebar: '#FFFFFF',
+              input: '#F4F7F5',
+              border: '#EAF1ED',
+              pill: '#EDF5F0',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: radial-gradient(120% 120% at 50% 10%, #E7F6ED 0%, #D4EDE0 45%, #C2E4D2 100%);
+      min-height: 100vh;
+      color: #172E22;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F0F6F2;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #BEDCCE;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #99C7B0;
+    }
+    .main-app-card {
+      box-shadow: 0 25px 60px -15px rgba(16, 68, 38, 0.16), 0 10px 25px -5px rgba(16, 68, 38, 0.08);
+    }
+    .glass-banner {
+      background: linear-gradient(135deg, #2E8B57 0%, #15803D 55%, #0F652E 100%);
+    }
+    .nav-indicator {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 24px;
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px;
+      background-color: #16A34A;
+    }
+    .tile-hover {
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tile-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -8px rgba(16, 68, 38, 0.12);
+    }
+    .badge-soft {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    /* Toast animation */
+    @keyframes slideDownToast {
+      from { transform: translate(-50%, -100%); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+    .animate-toast {
+      animation: slideDownToast 0.3s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center font-sans antialiased">
+
+  <div class="w-full max-w-[1560px] bg-[#F7FAF8] rounded-[36px] main-app-card border border-white/80 overflow-hidden flex flex-col lg:flex-row min-h-[92vh]">
+    
+    <!-- SIDEBAR NAVIGATION (Matching reference layout) -->
+    <aside class="w-full lg:w-60 bg-white border-b lg:border-b-0 lg:border-r border-surface-border p-6 flex flex-col justify-between shrink-0">
+      <div>
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3 px-2 py-1 mb-8 cursor-pointer" onclick="switchTab('dashboard')">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white shadow-md shadow-brand-700/20">
+            <i data-lucide="citrus" class="w-5 h-5"></i>
+          </div>
+          <span class="text-2xl font-black tracking-tight text-brand-900">SaladFlow</span>
+        </div>
+
+        <!-- Navigation items list -->
+        <nav class="space-y-1.5" id="navContainer">
+          
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all text-brand-700 bg-brand-50/80">
+            <i data-lucide="layout-grid" class="w-4 h-4 text-brand-600"></i>
+            <span>Dashboard</span>
+            <span class="nav-indicator" id="ind-dashboard"></span>
+          </button>
+
+          <button onclick="switchTab('ingredients')" id="nav-ingredients" class="nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-semibold transition-all text-slate-500 hover:text-brand-700 hover:bg-brand-50/50">
+            <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-400 group-hover:text-brand-600"></i>
+            <span>Daftar Belanja & Bahan</span>
+            <span class="nav-indicator hidden" id="ind-ingredients"></span>
+          </button>
+
+          <button onclick="switchTab('recipes')" id="nav-recipes" class="nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-semibold transition-all text-slate-500 hover:text-brand-700 hover:bg-brand-50/50">
+            <i data-lucide="chef-hat" class="w-4 h-4 text-slate-400 group-hover:text-brand-600"></i>
+            <span>Kalkulator HPP Porsi</span>
+            <span class="nav-indicator hidden" id="ind-recipes"></span>
+          </button>
+
+          <button onclick="switchTab('sales')" id="nav-sales" class="nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-semibold transition-all text-slate-500 hover:text-brand-700 hover:bg-brand-50/50">
+            <i data-lucide="trending-up" class="w-4 h-4 text-slate-400 group-hover:text-brand-600"></i>
+            <span>Penjualan & Laba Rugi</span>
+            <span class="nav-indicator hidden" id="ind-sales"></span>
+          </button>
+
+          <button onclick="switchTab('simulation')" id="nav-simulation" class="nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-semibold transition-all text-slate-500 hover:text-brand-700 hover:bg-brand-50/50">
+            <i data-lucide="target" class="w-4 h-4 text-slate-400 group-hover:text-brand-600"></i>
+            <span>Target Profit & BEP</span>
+            <span class="nav-indicator hidden" id="ind-simulation"></span>
+          </button>
+
+          <div class="pt-4 mt-4 border-t border-slate-100">
+            <button onclick="openSettingsModal()" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-slate-500 hover:text-brand-700 hover:bg-brand-50/50 transition-all">
+              <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-400"></i>
+              <span>Biaya Tetap Usaha</span>
+            </button>
+          </div>
+
+        </nav>
+      </div>
+
+      <div class="pt-6 border-t border-surface-border">
+        <div class="p-3 bg-brand-50/70 border border-brand-100 rounded-2xl flex items-center gap-3">
+          <div class="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center font-black text-xs">
+            🥗
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="text-[11px] font-bold text-brand-900 block truncate">Margin Usaha</span>
+            <span class="text-[10px] text-emerald-600 font-semibold" id="sidebarMarginStatus">Sehat (47.5%)</span>
+          </div>
+        </div>
+
+        <button onclick="resetDataToDefault()" class="w-full mt-4 flex items-center justify-center gap-2 text-[11px] text-slate-400 hover:text-rose-600 py-1.5 font-medium transition-colors">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Data Contoh
+        </button>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[92vh] custom-scrollbar">
+      
+      <!-- TOPBAR (Search, Notifications & Profile Chip matching reference) -->
+      <header class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-6 border-b border-surface-border">
+        
+        <!-- Page Titles -->
+        <div>
+          <h1 id="pageTitle" class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Dashboard Usaha Salad Buah</h1>
+          <p id="pageSubtitle" class="text-xs text-slate-500 font-medium mt-0.5">Analisis HPP resep, modal belanja, dan proyeksi laba bersih harian</p>
+        </div>
+
+        <!-- Right Side: Search & Profile Avatar -->
+        <div class="flex items-center gap-3 justify-between sm:justify-end">
+          
+          <!-- Search input box -->
+          <div class="relative w-full sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="globalSearchInput" 
+              oninput="handleGlobalSearch(this.value)" 
+              placeholder="Cari buah, saus, cup..." 
+              class="w-full pl-9 pr-4 py-2.5 bg-white border border-surface-border rounded-2xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+            />
+          </div>
+
+          <!-- Notification Bell -->
+          <button onclick="showToast('Semua formula HPP & Laba Rugi sudah sinkron!')" class="w-10 h-10 rounded-2xl bg-white border border-surface-border flex items-center justify-center text-slate-500 hover:text-brand-700 hover:bg-brand-50 transition-all shadow-sm shrink-0">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+          </button>
+
+          <!-- User Profile Chip (Hello, Owner) -->
+          <div class="flex items-center gap-2.5 bg-white border border-surface-border py-1.5 px-3 rounded-2xl shadow-sm shrink-0">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-base">
+              🥑
+            </div>
+            <div class="text-left hidden md:block">
+              <span class="text-xs font-bold text-slate-800 block leading-tight">Dapur Buah Fresh</span>
+              <span class="text-[10px] text-brand-600 font-semibold">Owner Admin</span>
+            </div>
+          </div>
+
+        </div>
+
+      </header>
+
+      <div id="tab-dashboard" class="space-y-6 pt-6 block">
+        
+        <!-- HERO ROW: Special Weekend Banner (Left) + Top Categories Donut Card (Right) -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          
+          <!-- Special Offer / Fresh Salad Hero Banner (Col 1 & 2) -->
+          <div class="xl:col-span-2 relative overflow-hidden rounded-[30px] glass-banner text-white p-6 sm:p-8 flex flex-col justify-between min-h-[250px] shadow-xl shadow-brand-900/15">
+            <!-- Background Glow Circles -->
+            <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute right-6 top-6 text-7xl opacity-20 select-none pointer-events-none">🥗🍇🍓</div>
+
+            <!-- Top Pill Badge -->
+            <div class="relative z-10 flex items-center justify-between">
+              <span class="badge-soft px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide border border-white/20 text-white flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i> Fresh Salad Costing Pro
+              </span>
+              <span class="text-xs text-brand-100 font-medium" id="currentDateBadge">Hari ini</span>
+            </div>
+
+            <!-- Headline matching reference format -->
+            <div class="relative z-10 my-4 max-w-lg">
+              <h2 class="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
+                Kendali Modal Bahan & <br/>
+                <span class="text-amber-300">Untung Pasti</span> di Setiap Cup!
+              </h2>
+              <p class="text-xs sm:text-sm text-brand-100 mt-2 font-medium leading-relaxed">
+                Kalkulasi otomatis gramasi melon, apel, anggur, saus mayo, keju cheddar parut, hingga cup dan garpu agar jualan tidak boncos.
+              </p>
+            </div>
+
+            <!-- Action Buttons on Banner -->
+            <div class="relative z-10 flex flex-wrap items-center gap-3 pt-2">
+              <button onclick="openAddSaleModal()" class="bg-white text-brand-900 hover:bg-brand-50 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-black/10 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-brand-600"></i> Catat Penjualan Hari Ini
+              </button>
+              
+              <button onclick="switchTab('ingredients'); openAddIngredientModal();" class="badge-soft text-white hover:bg-white/30 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-white/25 flex items-center gap-2">
+                <i data-lucide="shopping-cart" class="w-4 h-4"></i> Input Belanja Pasar
+              </button>
+
+              <button onclick="switchTab('recipes')" class="text-xs text-brand-100 hover:text-white underline font-semibold ml-2">
+                Ubah Takaran Resep →
+              </button>
+            </div>
+          </div>
+
+          <!-- Top Categories (Donut breakdown matching reference) -->
+          <div class="bg-white border border-surface-border rounded-[30px] p-6 flex flex-col justify-between shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-800">Top Komposisi Modal</h3>
+                <p class="text-[11px] text-slate-400 font-medium">Berdasarkan Resep Cup 400ml</p>
+              </div>
+              <button onclick="switchTab('recipes')" class="text-[11px] font-bold text-brand-600 hover:underline">Detail</button>
+            </div>
+
+            <div class="flex items-center gap-4 my-2">
+              <!-- Doughnut Canvas -->
+              <div class="relative w-36 h-36 shrink-0 flex items-center justify-center">
+                <canvas id="costDoughnutChart"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span class="text-xl font-black text-slate-800 leading-none" id="donutFruitPct">52%</span>
+                  <span class="text-[9px] font-bold text-slate-400 mt-0.5">Buah Segar</span>
+                </div>
+              </div>
+
+              <!-- Legend Details with animated progress bars -->
+              <div class="flex-1 space-y-3 text-xs">
+                <div>
+                  <div class="flex justify-between font-bold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span> Buah Segar</span>
+                    <span id="labelFruitPct">52%</span>
+                  </div>
+                  <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                    <div id="barFruitPct" class="bg-emerald-600 h-full rounded-full transition-all duration-500" style="width: 52%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between font-bold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> Saus & Keju</span>
+                    <span id="labelDressingPct">33%</span>
+                  </div>
+                  <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                    <div id="barDressingPct" class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 33%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between font-bold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Cup & Kemasan</span>
+                    <span id="labelPackPct">15%</span>
+                  </div>
+                  <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                    <div id="barPackPct" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 15%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <span class="text-[10px] text-slate-400 text-center font-medium">*Formula otomatis mencegah boncos saat belanja buah</span>
+          </div>
+
+        </div>
+
+        <div class="bg-white border border-surface-border rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Varian Cup & Menu:</span>
+            <div class="flex items-center -space-x-1.5">
+              <span class="w-8 h-8 rounded-full bg-emerald-100 border-2 border-white flex items-center justify-center text-sm shadow-sm" title="Semangka">🍉</span>
+              <span class="w-8 h-8 rounded-full bg-amber-100 border-2 border-white flex items-center justify-center text-sm shadow-sm" title="Melon">🍈</span>
+              <span class="w-8 h-8 rounded-full bg-rose-100 border-2 border-white flex items-center justify-center text-sm shadow-sm" title="Apel">🍎</span>
+              <span class="w-8 h-8 rounded-full bg-purple-100 border-2 border-white flex items-center justify-center text-sm shadow-sm" title="Anggur">🍇</span>
+              <span class="w-8 h-8 rounded-full bg-pink-100 border-2 border-white flex items-center justify-center text-sm shadow-sm" title="Naga Merah">🐉</span>
+              <span class="w-8 h-8 rounded-full bg-brand-600 text-white border-2 border-white flex items-center justify-center text-[10px] font-extrabold shadow-sm">+15</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="switchTab('recipes')" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-800 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+              <i data-lucide="eye" class="w-3.5 h-3.5 text-brand-600"></i> Lihat Detail HPP per Cup
+            </button>
+            <button onclick="openAddSaleModal()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Transaksi Baru
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <div class="bg-white border border-surface-border rounded-2xl p-4.5 shadow-sm hover:border-brand-300 transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">Total Omzet</span>
+              <div class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-slate-800" id="dashTotalOmzet">Rp 0</div>
+            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 mt-1.5">
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+              <span id="dashCupSold">0 Cup</span>
+              <span class="text-slate-400 font-normal">• Penjualan</span>
+            </div>
+          </div>
+
+          <div class="bg-white border border-surface-border rounded-2xl p-4.5 shadow-sm hover:border-brand-300 transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">Total Modal (HPP)</span>
+              <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-slate-800" id="dashTotalHpp">Rp 0</div>
+            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 mt-1.5">
+              <span id="dashHppRatio">52% dari omzet</span>
+              <span class="text-slate-400 font-normal">• Bahan & Cup</span>
+            </div>
+          </div>
+
+          <div class="bg-white border border-surface-border rounded-2xl p-4.5 shadow-sm hover:border-brand-300 transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">Laba Kotor</span>
+              <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <i data-lucide="trending-up" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-slate-800" id="dashGrossProfit">Rp 0</div>
+            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 mt-1.5">
+              <span id="dashGrossMargin">Margin 48%</span>
+              <span class="text-slate-400 font-normal">• Sebelum beban</span>
+            </div>
+          </div>
+
+          <div class="bg-white border border-brand-200 rounded-2xl p-4.5 shadow-sm bg-gradient-to-b from-brand-50/50 to-white">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-extrabold tracking-wider uppercase text-brand-900">Laba Bersih Murni</span>
+              <div class="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-sm">
+                <i data-lucide="badge-check" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-brand-900" id="dashNetProfit">Rp 0</div>
+            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-brand-700 mt-1.5">
+              <span class="bg-brand-200/80 px-1.5 py-0.5 rounded text-[10px]" id="dashNetMargin">Net Margin 38%</span>
+              <span class="text-slate-400 font-normal text-[10px]">Gaji Pemilik</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          
+          <!-- Left 2 Cols: "New categories" (Fruit & Dressing Cards with grid tiles) -->
+          <div class="xl:col-span-2 space-y-6">
+            
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-black text-slate-800 tracking-tight">Kategori Bahan & Kemasan Menu</h3>
+                <p class="text-xs text-slate-500 font-medium">Klik bahan untuk melihat atau mengubah harga grosir pasar</p>
+              </div>
+              <button onclick="switchTab('ingredients')" class="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
+                Lihat Semua (15 Bahan) <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Two Category Cards (Homage to "Fruits and berries" & "Vegetables and herbs" from photo) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <!-- Card 1: Buah Segar Pilihan -->
+              <div class="bg-white border border-surface-border rounded-3xl p-5 shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-2xl flex items-center justify-center border border-emerald-100">
+                      🍉
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-extrabold text-slate-800">Buah Segar Pilihan</h4>
+                      <p class="text-[11px] text-slate-400 font-medium">Komponen utama porsi salad</p>
+                    </div>
+                  </div>
+                  <button onclick="switchTab('ingredients')" class="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-xl">Kelola</button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2.5" id="dashFruitGrid">
+                  <!-- Injected via JavaScript (Watermelon, Melon, Apple, Grape, Dragon fruit, etc) -->
+                </div>
+              </div>
+
+              <!-- Card 2: Saus Dressing & Kemasan Cup -->
+              <div class="bg-white border border-surface-border rounded-3xl p-5 shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-2xl flex items-center justify-center border border-amber-100">
+                      🥣
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-extrabold text-slate-800">Dressing, Keju & Cup</h4>
+                      <p class="text-[11px] text-slate-400 font-medium">Bahan penentu rasa & packaging</p>
+                    </div>
+                  </div>
+                  <button onclick="switchTab('ingredients')" class="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-xl">Kelola</button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2.5" id="dashPackGrid">
+                  <!-- Injected via JavaScript (Mayo, Yogurt, SKM, Keju, Cup 400ml, Cup 500ml) -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Quick Action Menus Overview -->
+            <div class="bg-white border border-surface-border rounded-3xl p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h4 class="text-sm font-extrabold text-slate-800">Penetapan Harga Menu Salad</h4>
+                  <p class="text-xs text-slate-400">Terhubung langsung ke formula HPP dinamis</p>
+                </div>
+                <button onclick="switchTab('recipes')" class="text-xs font-bold text-brand-600 hover:underline">Ubah Resep</button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="dashMenuCards">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right 1 Col: "New buyers" Smooth Line Trend Chart (Direct match to reference curve) -->
+          <div class="bg-white border border-surface-border rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-base font-extrabold text-slate-800">Tren Performa Penjualan</h3>
+                <span class="text-xs font-semibold text-slate-400" id="trendMonthBadge">Oktober 2026</span>
+              </div>
+              <p class="text-xs text-slate-400 font-medium">Perbandingan Omzet vs Modal Terpakai</p>
+
+              <!-- Peak indicator card (Matching tooltip "August 325 000" in photo) -->
+              <div class="mt-4 p-3.5 bg-[#F4FAF6] border border-brand-100 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-extrabold text-brand-700 tracking-wider">Rekor Penjualan Harian</span>
+                  <p class="text-base font-black text-brand-900" id="dashPeakDayVal">Rp 1.125.000 / hari</p>
+                </div>
+                <button onclick="openAddSaleModal()" class="text-xs bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all">
+                  + Jual
+                </button>
+              </div>
+
+              <!-- Smooth Curve Chart -->
+              <div class="h-60 mt-4 relative">
+                <canvas id="salesTrendChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Legend below chart -->
+            <div class="flex items-center justify-center gap-6 pt-4 border-t border-slate-100 text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-brand-500 inline-block"></span> Omzet Penjualan
+              </span>
+              <span class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Modal HPP
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div id="tab-ingredients" class="space-y-6 pt-6 hidden">
+        
+        <!-- Action Header Bar -->
+        <div class="bg-white border border-surface-border rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-800">Daftar Belanjaan & Database Harga Pokok Bahan</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Input pembelian grosir dari pasar/supplier. Sistem otomatis menghitung harga per gram atau per buah.</p>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button onclick="openAddIngredientModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-md shadow-brand-600/20 flex items-center gap-2">
+              <i data-lucide="plus" class="w-4 h-4"></i> Tambah Item Baru
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Category Buttons -->
+        <div class="flex flex-wrap items-center gap-2" id="ingredientCategoryFilters">
+          <button onclick="filterIngredientCategory('ALL')" class="cat-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold transition-all bg-brand-600 text-white shadow-sm" data-cat="ALL">Semua (15)</button>
+          <button onclick="filterIngredientCategory('Buah Segar')" class="cat-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold transition-all bg-white border border-surface-border text-slate-600 hover:bg-brand-50" data-cat="Buah Segar">🍉 Buah Segar</button>
+          <button onclick="filterIngredientCategory('Dressing & Saus')" class="cat-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold transition-all bg-white border border-surface-border text-slate-600 hover:bg-brand-50" data-cat="Dressing & Saus">🥣 Dressing & Saus</button>
+          <button onclick="filterIngredientCategory('Topping')" class="cat-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold transition-all bg-white border border-surface-border text-slate-600 hover:bg-brand-50" data-cat="Topping">🧀 Topping & Keju</button>
+          <button onclick="filterIngredientCategory('Packaging')" class="cat-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold transition-all bg-white border border-surface-border text-slate-600 hover:bg-brand-50" data-cat="Packaging">📦 Cup & Kemasan</button>
+        </div>
+
+        <!-- Table Card -->
+        <div class="bg-white border border-surface-border rounded-3xl overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-[#F4FAF6] border-b border-surface-border text-slate-600 font-extrabold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th class="py-3.5 px-4">Kode</th>
+                  <th class="py-3.5 px-4">Nama Bahan / Kemasan</th>
+                  <th class="py-3.5 px-4">Kategori</th>
+                  <th class="py-3.5 px-4 text-center">Beli Grosir</th>
+                  <th class="py-3.5 px-4 text-right">Isi Bersih Konversi</th>
+                  <th class="py-3.5 px-4 text-right">Harga Beli Total</th>
+                  <th class="py-3.5 px-4 text-right font-black text-brand-900 bg-brand-50/70">Harga / Satuan Terkecil</th>
+                  <th class="py-3.5 px-4 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="ingredientsTableBody" class="divide-y divide-slate-100 text-slate-700">
+                <!-- Injected via renderIngredientsTable() -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table footer summary -->
+          <div class="p-4 bg-[#F9FCFA] border-t border-surface-border flex flex-col sm:flex-row items-center justify-between text-xs text-slate-600 gap-2">
+            <span id="ingredientStatsLabel">Menampilkan item bahan baku & kemasan aktif</span>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-800">Total Nilai Pembelian Stok:</span>
+              <span class="text-sm font-black text-brand-800" id="totalInventoryCostBadge">Rp 0</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="tab-recipes" class="space-y-6 pt-6 hidden">
+        
+        <!-- Cup Variant Selector Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-surface-border p-4 rounded-3xl shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center font-bold">
+              <i data-lucide="coffee" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">Pilih Ukuran Cup Salad</h2>
+              <p class="text-xs text-slate-500">Setiap ukuran cup memiliki takaran gramasi & biaya kemasan sendiri</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-[#F1F7F3] p-1.5 rounded-2xl border border-surface-border">
+            <button onclick="selectRecipeVariant('400ml')" id="btn-recipe-400" class="px-4 py-2 rounded-xl text-xs font-extrabold transition-all bg-brand-600 text-white shadow-sm">
+              Cup Regular 400ml
+            </button>
+            <button onclick="selectRecipeVariant('500ml')" id="btn-recipe-500" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:bg-white/80">
+              Cup Jumbo 500ml
+            </button>
+            <button onclick="openEditRecipeGrammageModal()" class="px-3 py-2 rounded-xl text-xs font-bold text-brand-700 hover:bg-brand-100 flex items-center gap-1">
+              <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Edit Takaran Gramasi
+            </button>
+          </div>
+        </div>
+
+        <!-- Recipe Content & Dynamic Pricing Simulator (2 Columns) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Left 2 Cols: Ingredient Grammage Breakdown -->
+          <div class="lg:col-span-2 bg-white border border-surface-border rounded-3xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-extrabold text-slate-800" id="recipeActiveTitle">Komposisi Resep: Salad Buah Regular 400ml</h3>
+                <p class="text-xs text-slate-500">Harga bahan terhubung otomatis ke database belanja pasar</p>
+              </div>
+              <span class="text-xs font-black bg-brand-100 text-brand-800 px-3 py-1 rounded-full" id="recipeTotalWeightBadge">345 Gram / Cup</span>
+            </div>
+
+            <!-- Recipe table -->
+            <div class="overflow-x-auto rounded-2xl border border-surface-border">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-[#F4FAF6] border-b border-surface-border text-slate-600 font-extrabold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th class="py-3 px-3.5">No</th>
+                    <th class="py-3 px-3.5">Bahan / Kemasan</th>
+                    <th class="py-3 px-3.5 text-center">Takaran Saji</th>
+                    <th class="py-3 px-3.5 text-right">Biaya Satuan</th>
+                    <th class="py-3 px-3.5 text-right font-bold text-brand-900">Subtotal Modal</th>
+                    <th class="py-3 px-3.5 text-center">% Modal</th>
+                  </tr>
+                </thead>
+                <tbody id="recipeItemsTableBody" class="divide-y divide-slate-100">
+                  <!-- Injected via renderRecipeView() -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Overhead buffer slider -->
+            <div class="bg-[#F8FDF9] p-4 rounded-2xl border border-brand-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="shield-alert" class="w-4 h-4 text-brand-700"></i>
+                <div>
+                  <span class="text-xs font-bold text-slate-800 block">Cadangan Susut Buah & Listrik (Overhead)</span>
+                  <span class="text-[11px] text-slate-500">Untuk mengantisipasi kulit buah terbuang & chiller kulkas</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input type="range" id="overheadRange" min="5" max="25" value="10" step="1" oninput="updateOverheadPct(this.value)" class="w-28 accent-brand-600 cursor-pointer" />
+                <span class="text-xs font-black text-brand-900 bg-white px-2.5 py-1 rounded-lg border border-brand-200" id="overheadPctLabel">10%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right 1 Col: Pricing Recommendation Card -->
+          <div class="bg-white border border-brand-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-6">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-brand-800">Kalkulasi HPP & Margin</span>
+                <span class="text-xs bg-brand-50 text-brand-700 font-black px-2.5 py-0.5 rounded-full" id="recipeBadgePorsi">Per Cup</span>
+              </div>
+
+              <!-- Cost rows -->
+              <div class="space-y-3 mt-4 text-xs">
+                <div class="flex justify-between text-slate-600">
+                  <span>Total Biaya Bahan Pokok:</span>
+                  <span class="font-bold text-slate-800" id="calcRawCost">Rp 0</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                  <span>Cadangan Susut Buah (<span id="calcOverheadLabel">10%</span>):</span>
+                  <span class="font-bold text-slate-800" id="calcOverheadCost">Rp 0</span>
+                </div>
+                <div class="flex justify-between text-brand-900 font-black text-sm py-2 px-3 bg-brand-50 rounded-xl">
+                  <span>TOTAL HPP / CUP:</span>
+                  <span id="calcTotalHpp">Rp 0</span>
+                </div>
+              </div>
+
+              <!-- Margin slider -->
+              <div class="mt-6 pt-4 border-t border-slate-100">
+                <div class="flex justify-between items-center text-xs mb-2">
+                  <span class="font-bold text-slate-700">Target Margin Keuntungan:</span>
+                  <span class="font-black text-brand-700 text-sm" id="marginSliderLabel">45%</span>
+                </div>
+                <input type="range" id="targetMarginRange" min="20" max="70" value="45" step="1" oninput="updateMarginTarget(this.value)" class="w-full accent-brand-600 cursor-pointer" />
+                <div class="flex justify-between text-[10px] text-slate-400 font-semibold mt-1">
+                  <span>20% (Tipis)</span>
+                  <span>45% (Ideal Salad)</span>
+                  <span>70% (Tinggi)</span>
+                </div>
+              </div>
+
+              <!-- Price Box -->
+              <div class="mt-6 p-4 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 text-white shadow-lg shadow-brand-900/20 text-center">
+                <span class="text-[11px] font-semibold text-brand-200 uppercase tracking-wider block">Harga Jual Resmi / Cup</span>
+                <div class="text-2xl sm:text-3xl font-black mt-1 tracking-tight" id="calcSellingPrice">Rp 0</div>
+                <div class="text-[11px] text-brand-100 font-medium mt-1">
+                  Estimasi Untung Bersih: <span class="font-black text-white" id="calcProfitPerCup">Rp 0</span> / cup
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Action button -->
+            <button onclick="applySellingPriceToSales()" class="w-full py-2.5 bg-brand-100 hover:bg-brand-200 text-brand-900 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-700"></i> Simpan ke Menu Jualan
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div id="tab-sales" class="space-y-6 pt-6 hidden">
+        
+        <!-- Header row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <div class="lg:col-span-2 bg-white border border-surface-border rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-extrabold text-slate-800">Catatan Penjualan & Laba Rugi Harian</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Setiap penjualan otomatis menghitung omzet, modal HPP yang keluar, dan keuntungan kotor.</p>
+            </div>
+            <button onclick="openAddSaleModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-md shadow-brand-600/20 flex items-center gap-2 shrink-0">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i> Catat Penjualan Baru
+            </button>
+          </div>
+
+          <div class="bg-white border border-surface-border rounded-3xl p-6 shadow-sm flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Beban Biaya Tetap Bulanan</span>
+              <span class="text-xl font-black text-slate-800 mt-0.5 block" id="totalFixedExpenseLabel">Rp 550.000</span>
+              <span class="text-[11px] text-slate-500">Listrik, es batu, pulsa, bensin</span>
+            </div>
+            <button onclick="openSettingsModal()" class="bg-brand-50 hover:bg-brand-100 text-brand-800 p-2.5 rounded-xl border border-brand-200 transition-all" title="Ubah Biaya Tetap">
+              <i data-lucide="settings-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Sales Transaction Log Table -->
+        <div class="bg-white border border-surface-border rounded-3xl overflow-hidden shadow-sm">
+          <div class="p-4 border-b border-surface-border flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-800">Log Riwayat Transaksi</h3>
+            <span class="text-xs text-slate-500 font-semibold" id="salesTransactionCount">Menampilkan transaksi</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-[#F4FAF6] border-b border-surface-border text-slate-600 font-extrabold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th class="py-3.5 px-4">Tanggal</th>
+                  <th class="py-3.5 px-4">Varian Menu</th>
+                  <th class="py-3.5 px-4 text-center">Jumlah Cup</th>
+                  <th class="py-3.5 px-4 text-right">Harga Jual / Cup</th>
+                  <th class="py-3.5 px-4 text-right">Modal HPP / Cup</th>
+                  <th class="py-3.5 px-4 text-right">Total Omzet</th>
+                  <th class="py-3.5 px-4 text-right">Total Modal Keluar</th>
+                  <th class="py-3.5 px-4 text-right font-black text-brand-900 bg-brand-50/70">Laba Kotor</th>
+                  <th class="py-3.5 px-4 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="salesTableBody" class="divide-y divide-slate-100 text-slate-700">
+                <!-- Injected via renderSalesView() -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Full Profit & Loss Statement (Akuntansi Sederhana) -->
+        <div class="bg-white border border-surface-border rounded-3xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-800">Laporan Laba Rugi Operasional Usaha</h3>
+              <p class="text-xs text-slate-500">Ringkasan akuntansi sederhana untuk mengetahui laba bersih murni pemilik</p>
+            </div>
+            <span class="text-xs bg-brand-100 text-brand-800 px-3 py-1 rounded-full font-bold">Periode Berjalan</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left: Breakdown List -->
+            <div class="space-y-3 text-xs">
+              <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-bold text-slate-700">1. Pendapatan Penjualan (Total Omzet):</span>
+                <span class="font-extrabold text-slate-900" id="plRevenue">Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2 border-b border-slate-100 text-rose-700">
+                <span>2. Biaya Pokok Penjualan / HPP (Bahan & Cup):</span>
+                <span class="font-bold" id="plCogs">- Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2.5 px-3 bg-brand-50/80 rounded-xl font-black text-brand-900 text-sm">
+                <span>LABA KOTOR (GROSS PROFIT):</span>
+                <span id="plGross">Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2 border-b border-slate-100 text-slate-600">
+                <span>Biaya Listrik Kulkas / Chiller Buah:</span>
+                <span class="font-semibold" id="plExpElectricity">- Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2 border-b border-slate-100 text-slate-600">
+                <span>Biaya Es Batu & Air Galon:</span>
+                <span class="font-semibold" id="plExpIce">- Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2 border-b border-slate-100 text-slate-600">
+                <span>Bensin Belanja Pasar & Ongkir:</span>
+                <span class="font-semibold" id="plExpTransport">- Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2 border-b border-slate-100 text-slate-600">
+                <span>Kuota Internet & Promosi Sosmed:</span>
+                <span class="font-semibold" id="plExpInternet">- Rp 0</span>
+              </div>
+
+              <div class="flex justify-between py-2 border-b border-slate-200 font-bold text-slate-800">
+                <span>Total Pengeluaran Operasional Tetap:</span>
+                <span class="text-rose-700" id="plTotalExpenses">- Rp 0</span>
+              </div>
+            </div>
+
+            <!-- Right: Executive Profit Summary Highlight -->
+            <div class="bg-gradient-to-br from-[#104323] to-[#176236] text-white p-6 rounded-3xl flex flex-col justify-between shadow-md">
+              <div>
+                <span class="text-xs uppercase tracking-wider font-extrabold text-brand-200 block">HASIL AKHIR LABA BERSIH (NET)</span>
+                <div class="text-3xl sm:text-4xl font-black mt-2 tracking-tight" id="plNetProfit">Rp 0</div>
+                <p class="text-xs text-brand-100 mt-2 font-medium">
+                  Uang bersih murni yang siap Anda ambil sebagai gaji pemilik atau dialokasikan untuk tabungan buka cabang kedua.
+                </p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-white/20 text-center">
+                <div class="bg-white/10 rounded-2xl p-3">
+                  <span class="text-[10px] text-brand-200 block font-semibold">Net Profit Margin</span>
+                  <span class="text-lg font-black mt-0.5 block" id="plNetMarginPct">0%</span>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-3">
+                  <span class="text-[10px] text-brand-200 block font-semibold">Rata-rata Laba / Cup</span>
+                  <span class="text-lg font-black mt-0.5 block" id="plAvgProfitPerCup">Rp 0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="tab-simulation" class="space-y-6 pt-6 hidden">
+        
+        <div class="bg-white border border-surface-border rounded-3xl p-6 shadow-sm">
+          <h2 class="text-lg font-extrabold text-slate-800">Simulasi Target Keuntungan & Titik Impas (Break-Even Point)</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Ingin punya penghasilan bulanan tertentu dari jualan salad buah? Hitung target cup yang harus terjual per hari.</p>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            
+            <!-- Left: Target Input Card -->
+            <div class="space-y-4 bg-[#F8FCFA] p-5 rounded-2xl border border-brand-100">
+              <span class="text-xs font-black uppercase tracking-wider text-brand-800 block">Parameter Target Anda</span>
+
+              <div>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Target Laba Bersih per Bulan (Rp):</label>
+                <input type="number" id="simTargetNetIncome" value="3000000" step="500000" oninput="calculateSimulation()" class="w-full px-3.5 py-2.5 bg-white border border-surface-border rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+              </div>
+
+              <div>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Jumlah Hari Jualan per Bulan:</label>
+                <input type="number" id="simWorkingDays" value="26" min="1" max="31" oninput="calculateSimulation()" class="w-full px-3.5 py-2.5 bg-white border border-surface-border rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+                <span class="text-[10px] text-slate-400">Contoh: 26 hari (libur 1 hari seminggu)</span>
+              </div>
+
+              <div>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Varian Utama yang Dihitung:</label>
+                <select id="simTargetVariant" onchange="calculateSimulation()" class="w-full px-3.5 py-2.5 bg-white border border-surface-border rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="400ml">Salad Regular 400ml</option>
+                  <option value="500ml">Salad Jumbo 500ml</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Right: Results Card -->
+            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              <div class="bg-white border border-surface-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Target Jual Harian</span>
+                  <div class="text-3xl sm:text-4xl font-black text-brand-700 mt-2" id="simDailyCupTarget">0 Cup</div>
+                  <p class="text-xs text-slate-500 mt-2 font-medium">
+                    Minimal penjualan per hari agar target gaji bersih Anda tercapai setelah bayar operasional.
+                  </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700">
+                  Total Sebulan: <span class="text-brand-800 font-extrabold" id="simMonthlyCupTarget">0 Cup</span>
+                </div>
+              </div>
+
+              <div class="bg-white border border-surface-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Target Omzet Harian</span>
+                  <div class="text-3xl sm:text-4xl font-black text-slate-800 mt-2" id="simDailyRevenueTarget">Rp 0</div>
+                  <p class="text-xs text-slate-500 mt-2 font-medium">
+                    Penerimaan uang kotor harian dari pelanggan yang masuk ke kasir atau QRIS Anda.
+                  </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700">
+                  Omzet Sebulan: <span class="text-slate-900 font-extrabold" id="simMonthlyRevenueTarget">Rp 0</span>
+                </div>
+              </div>
+
+              <!-- BEP (Break Even Point) -->
+              <div class="sm:col-span-2 bg-gradient-to-r from-brand-50 to-emerald-50 border border-brand-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="award" class="w-5 h-5 text-brand-700"></i>
+                    <h4 class="text-sm font-extrabold text-brand-900">Titik Impas (Break-Even Point) Usaha</h4>
+                  </div>
+                  <p class="text-xs text-slate-600 mt-1 max-w-xl font-medium">
+                    Anda hanya perlu menjual <span class="font-black text-brand-900" id="simBepCups">0 cup</span> per bulan (sekitar <span class="font-black text-brand-900" id="simBepDaily">0 cup/hari</span>) untuk menutup seluruh biaya operasional tetap. Setelah cup ini tercapai tiap hari, penjualan berikutnya adalah keuntungan murni!
+                  </p>
+                </div>
+                <span class="px-4 py-2 bg-brand-600 text-white font-extrabold text-xs rounded-xl shrink-0 shadow-sm">
+                  Risiko: Rendah
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+
+  <!-- MODAL 1: Tambah / Edit Bahan Belanjaan -->
+  <div id="modalAddIngredient" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-border">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-800" id="ingredientModalTitle">Tambah Item Bahan Belanjaan</h3>
+        <button onclick="closeModal('modalAddIngredient')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="ingredientForm" onsubmit="saveIngredient(event)" class="space-y-3.5 mt-4 text-xs">
+        <input type="hidden" id="ingEditId" value="" />
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Nama Bahan / Kemasan:</label>
+          <input type="text" id="ingName" required placeholder="Contoh: Buah Naga Merah, Cup 400ml" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Kategori:</label>
+            <select id="ingCategory" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
+              <option value="Buah Segar">Buah Segar</option>
+              <option value="Dressing & Saus">Dressing & Saus</option>
+              <option value="Topping">Topping</option>
+              <option value="Packaging">Packaging / Kemasan</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Satuan Dasar:</label>
+            <select id="ingUnit" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
+              <option value="gram">gram (Buah/Saus)</option>
+              <option value="pcs">pcs (Cup/Garpu/Stiker)</option>
+              <option value="ml">ml (Cairan)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Kuantitas Pembelian Grosir:</label>
+            <input type="text" id="ingPurchaseDesc" placeholder="Contoh: 1 karung (5 kg)" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Isi Bersih Konversi:</label>
+            <input type="number" id="ingNetQuantity" required placeholder="5000 (gr) / 100 (pcs)" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Total Harga Beli Grosir (Rp):</label>
+          <input type="number" id="ingPrice" required placeholder="45000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold text-slate-900" />
+        </div>
+
+        <div class="pt-3 flex gap-2.5">
+          <button type="button" onclick="closeModal('modalAddIngredient')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all">
+            Batal
+          </button>
+          <button type="submit" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all shadow-md shadow-brand-600/25">
+            Simpan Bahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Catat Transaksi Penjualan Baru -->
+  <div id="modalAddSale" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-border">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-800">Catat Penjualan Salad Harian</h3>
+        <button onclick="closeModal('modalAddSale')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="saleForm" onsubmit="saveSale(event)" class="space-y-3.5 mt-4 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Tanggal Transaksi:</label>
+          <input type="date" id="saleDate" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Pilih Varian Menu Salad:</label>
+          <select id="saleVariant" onchange="syncSalePriceWithVariant()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold">
+            <option value="Salad Buah Regular 400ml">Salad Buah Regular 400ml</option>
+            <option value="Salad Buah Jumbo 500ml">Salad Buah Jumbo 500ml</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Jumlah Cup Laku:</label>
+            <input type="number" id="saleQty" min="1" value="20" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold" />
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Harga Jual / Cup (Rp):</label>
+            <input type="number" id="salePrice" value="17000" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold" />
+          </div>
+        </div>
+
+        <div class="p-3 bg-brand-50 rounded-xl border border-brand-100 text-[11px] text-brand-900">
+          Modal HPP otomatis dihitung dari resep aktif sehingga Anda langsung melihat laba kotor transaksi ini.
+        </div>
+
+        <div class="pt-3 flex gap-2.5">
+          <button type="button" onclick="closeModal('modalAddSale')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all">
+            Batal
+          </button>
+          <button type="submit" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all shadow-md shadow-brand-600/25">
+            Simpan Transaksi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Atur Biaya Operasional Tetap Bulanan -->
+  <div id="modalSettings" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-border">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-800">Atur Beban Biaya Tetap Bulanan</h3>
+        <button onclick="closeModal('modalSettings')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 mt-4 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Listrik Kulkas / Chiller Buah (Rp/bulan):</label>
+          <input type="number" id="setElectricity" value="180000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-brand-500 font-bold" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Es Batu & Air Galon Harian (Rp/bulan):</label>
+          <input type="number" id="setIce" value="120000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-brand-500 font-bold" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Bensin Belanja Pasar & Transport (Rp/bulan):</label>
+          <input type="number" id="setTransport" value="100000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-brand-500 font-bold" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Kuota Internet & Promosi Sosmed (Rp/bulan):</label>
+          <input type="number" id="setInternet" value="150000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-brand-500 font-bold" />
+        </div>
+
+        <div class="pt-3 flex gap-2.5">
+          <button onclick="closeModal('modalSettings')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all">
+            Batal
+          </button>
+          <button onclick="saveSettings()" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all shadow-md">
+            Simpan Pengeluaran
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Edit Takaran Gramasi Resep -->
+  <div id="modalEditGrammage" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-border">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-800" id="editGrammageModalTitle">Edit Takaran Gramasi Resep</h3>
+        <button onclick="closeModal('modalEditGrammage')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-3 pr-1 text-xs" id="editGrammageItemsContainer">
+        <!-- Injected via openEditRecipeGrammageModal() -->
+      </div>
+
+      <div class="pt-4 mt-4 border-t border-slate-100 flex gap-2.5">
+        <button onclick="closeModal('modalEditGrammage')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all">
+          Batal
+        </button>
+        <button onclick="saveEditedGrammage()" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all shadow-md">
+          Terapkan Gramasi Baru
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION -->
+  <div id="customToast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-xl z-50 text-xs font-bold flex items-center gap-2.5 hidden animate-toast border border-white/10">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMessage">Pesan notifikasi</span>
+  </div>
+
+  <script>
+    const DEFAULT_APP_STATE = {
+      activeTab: 'dashboard',
+      selectedRecipe: '400ml',
+      overheadPct: 0.10,
+      targetMarginPct: 0.45,
+
+      expenses: {
+        electricity: 180000,
+        ice: 120000,
+        transport: 100000,
+        internet: 150000,
+      },
+
+      ingredients: [
+        { id: 'B01', name: 'Semangka Merah Segar', category: 'Buah Segar', desc: '5 kg', unit: 'gram', netQty: 5000, price: 45000, emoji: '🍉' },
+        { id: 'B02', name: 'Melon Sky Rocket', category: 'Buah Segar', desc: '4 kg', unit: 'gram', netQty: 4000, price: 48000, emoji: '🍈' },
+        { id: 'B03', name: 'Apel Fuji Manis', category: 'Buah Segar', desc: '3 kg', unit: 'gram', netQty: 3000, price: 75000, emoji: '🍎' },
+        { id: 'B04', name: 'Anggur Red Globe', category: 'Buah Segar', desc: '2 kg', unit: 'gram', netQty: 2000, price: 80000, emoji: '🍇' },
+        { id: 'B05', name: 'Buah Naga Merah', category: 'Buah Segar', desc: '3 kg', unit: 'gram', netQty: 3000, price: 45000, emoji: '🐉' },
+        { id: 'B06', name: 'Mangga Harum Manis', category: 'Buah Segar', desc: '3 kg', unit: 'gram', netQty: 3000, price: 60000, emoji: '🥭' },
+        { id: 'B07', name: 'Mayonnaise Manis', category: 'Dressing & Saus', desc: 'Pouch 2 kg', unit: 'gram', netQty: 2000, price: 58000, emoji: '🥣' },
+        { id: 'B08', name: 'Yogurt Plain Kental', category: 'Dressing & Saus', desc: '1 Liter', unit: 'gram', netQty: 1000, price: 42000, emoji: '🥛' },
+        { id: 'B09', name: 'Susu Kental Manis (SKM)', category: 'Dressing & Saus', desc: '6 Kaleng (2.2kg)', unit: 'gram', netQty: 2220, price: 72000, emoji: '🥫' },
+        { id: 'B10', name: 'Keju Cheddar Olahan', category: 'Topping', desc: 'Block 2 kg', unit: 'gram', netQty: 2000, price: 96000, emoji: '🧀' },
+        { id: 'B11', name: 'Cup Plastik Oval 400ml + Tutup', category: 'Packaging', desc: '1 Slop (100 pcs)', unit: 'pcs', netQty: 100, price: 65000, emoji: '🥤' },
+        { id: 'B12', name: 'Cup Plastik Oval 500ml + Tutup', category: 'Packaging', desc: '1 Slop (100 pcs)', unit: 'pcs', netQty: 100, price: 75000, emoji: '🥤' },
+        { id: 'B13', name: 'Garpu Buah Mini Steril', category: 'Packaging', desc: 'Pack (200 pcs)', unit: 'pcs', netQty: 200, price: 24000, emoji: '🍴' },
+        { id: 'B14', name: 'Stiker Logo Waterproof 5cm', category: 'Packaging', desc: 'Lembar (300 pcs)', unit: 'pcs', netQty: 300, price: 60000, emoji: '🏷️' },
+        { id: 'B15', name: 'Kantong Kresek Bening', category: 'Packaging', desc: '1 Pack (100 pcs)', unit: 'pcs', netQty: 100, price: 15000, emoji: '🛍️' },
+      ],
+
+      recipes: {
+        '400ml': {
+          title: 'Salad Buah Regular 400ml',
+          cupName: 'Cup 400ml Oval',
+          sellingPrice: 17000,
+          items: [
+            { ingId: 'B01', qty: 60 },
+            { ingId: 'B02', qty: 60 },
+            { ingId: 'B03', qty: 40 },
+            { ingId: 'B04', qty: 20 },
+            { ingId: 'B05', qty: 30 },
+            { ingId: 'B07', qty: 35 },
+            { ingId: 'B08', qty: 20 },
+            { ingId: 'B09', qty: 20 },
+            { ingId: 'B10', qty: 25 },
+            { ingId: 'B11', qty: 1 },
+            { ingId: 'B13', qty: 1 },
+            { ingId: 'B14', qty: 1 },
+            { ingId: 'B15', qty: 1 },
+          ]
+        },
+        '500ml': {
+          title: 'Salad Buah Jumbo 500ml',
+          cupName: 'Cup 500ml Oval',
+          sellingPrice: 22000,
+          items: [
+            { ingId: 'B01', qty: 80 },
+            { ingId: 'B02', qty: 80 },
+            { ingId: 'B03', qty: 55 },
+            { ingId: 'B04', qty: 30 },
+            { ingId: 'B05', qty: 40 },
+            { ingId: 'B07', qty: 45 },
+            { ingId: 'B08', qty: 25 },
+            { ingId: 'B09', qty: 25 },
+            { ingId: 'B10', qty: 35 },
+            { ingId: 'B12', qty: 1 },
+            { ingId: 'B13', qty: 1 },
+            { ingId: 'B14', qty: 1 },
+            { ingId: 'B15', qty: 1 },
+          ]
+        }
+      },
+
+      sales: [
+        { id: 1, date: '2026-10-01', variant: 'Salad Buah Regular 400ml', qty: 25, price: 17000 },
+        { id: 2, date: '2026-10-01', variant: 'Salad Buah Jumbo 500ml', qty: 15, price: 22000 },
+        { id: 3, date: '2026-10-02', variant: 'Salad Buah Regular 400ml', qty: 30, price: 17000 },
+        { id: 4, date: '2026-10-02', variant: 'Salad Buah Jumbo 500ml', qty: 20, price: 22000 },
+        { id: 5, date: '2026-10-03', variant: 'Salad Buah Regular 400ml', qty: 35, price: 17000 },
+        { id: 6, date: '2026-10-03', variant: 'Salad Buah Jumbo 500ml', qty: 25, price: 22000 },
+        { id: 7, date: '2026-10-04', variant: 'Salad Buah Regular 400ml', qty: 40, price: 17000 },
+        { id: 8, date: '2026-10-04', variant: 'Salad Buah Jumbo 500ml', qty: 30, price: 22000 },
+        { id: 9, date: '2026-10-05', variant: 'Salad Buah Regular 400ml', qty: 45, price: 17000 },
+        { id: 10, date: '2026-10-05', variant: 'Salad Buah Jumbo 500ml', qty: 25, price: 22000 },
+      ]
+    };
+
+    let AppState = JSON.parse(localStorage.getItem('SALADFLOW_DATA_V2')) || JSON.parse(JSON.stringify(DEFAULT_APP_STATE));
+
+    function saveStateToStorage() {
+      localStorage.setItem('SALADFLOW_DATA_V2', JSON.stringify(AppState));
+    }
+
+    function resetDataToDefault() {
+      AppState = JSON.parse(JSON.stringify(DEFAULT_APP_STATE));
+      saveStateToStorage();
+      showToast("Data berhasil direset ke pengaturan awal.");
+      switchTab('dashboard');
+    }
+
+    // Chart instances
+    let doughnutChartInstance = null;
+    let salesTrendChartInstance = null;
+
+    function formatRp(num) {
+      if (isNaN(num)) return 'Rp 0';
+      return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+    }
+
+    function formatRpExact(num) {
+      if (isNaN(num)) return 'Rp 0';
+      return 'Rp ' + num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function getUnitCost(ing) {
+      if (!ing || !ing.netQty) return 0;
+      return ing.price / ing.netQty;
+    }
+
+    function getIngredientById(id) {
+      return AppState.ingredients.find(item => item.id === id);
+    }
+
+    function calculateRecipeHPP(recipeKey) {
+      const recipe = AppState.recipes[recipeKey];
+      if (!recipe) return { rawCost: 0, overhead: 0, totalHpp: 0, recPrice: 0, roundedPrice: 0, profit: 0, margin: 0, totalWeight: 0, fruitCost: 0, dressingCost: 0, packCost: 0 };
+
+      let rawCost = 0;
+      let totalWeight = 0;
+      let fruitCost = 0;
+      let dressingCost = 0;
+      let packCost = 0;
+
+      recipe.items.forEach(item => {
+        const ing = getIngredientById(item.ingId);
+        if (ing) {
+          const cost = getUnitCost(ing) * item.qty;
+          rawCost += cost;
+          if (ing.unit === 'gram') totalWeight += item.qty;
+
+          if (ing.category === 'Buah Segar') fruitCost += cost;
+          else if (ing.category === 'Dressing & Saus' || ing.category === 'Topping') dressingCost += cost;
+          else if (ing.category === 'Packaging') packCost += cost;
+        }
+      });
+
+      const overhead = rawCost * AppState.overheadPct;
+      const totalHpp = rawCost + overhead;
+      const recPrice = totalHpp / (1 - AppState.targetMarginPct);
+      const roundedPrice = Math.ceil(recPrice / 1000) * 1000;
+      const profit = roundedPrice - totalHpp;
+      const margin = profit / roundedPrice;
+
+      return {
+        rawCost,
+        overhead,
+        totalHpp,
+        recPrice,
+        roundedPrice,
+        profit,
+        margin,
+        totalWeight,
+        fruitCost,
+        dressingCost,
+        packCost
+      };
+    }
+
+    function switchTab(tabId) {
+      AppState.activeTab = tabId;
+      saveStateToStorage();
+
+      // Navigation pills
+      const tabs = ['dashboard', 'ingredients', 'recipes', 'sales', 'simulation'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('nav-' + t);
+        const ind = document.getElementById('ind-' + t);
+        const sec = document.getElementById('tab-' + t);
+
+        if (t === tabId) {
+          if (btn) {
+            btn.className = "nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all text-brand-700 bg-brand-50/80";
+          }
+          if (ind) ind.classList.remove('hidden');
+          if (sec) sec.classList.remove('hidden');
+        } else {
+          if (btn) {
+            btn.className = "nav-item group relative w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-xs font-semibold transition-all text-slate-500 hover:text-brand-700 hover:bg-brand-50/50";
+          }
+          if (ind) ind.classList.add('hidden');
+          if (sec) sec.classList.add('hidden');
+        }
+      });
+
+      // Update Page Headers
+      const titles = {
+        'dashboard': { t: 'Dashboard Usaha Salad Buah', st: 'Analisis HPP resep, modal belanja, dan proyeksi laba bersih harian' },
+        'ingredients': { t: 'Daftar Belanja & Database Modal Bahan', st: 'Input harga beli grosir untuk konversi otomatis biaya per gram dan per cup' },
+        'recipes': { t: 'Kalkulator Formula Resep & HPP Porsi', st: 'Simulasi HPP per cup, biaya overhead susut buah, dan rekomendasi harga jual' },
+        'sales': { t: 'Laporan Penjualan & Laba Rugi Usaha', st: 'Pencatatan harian otomatis terhubung dengan biaya operasional bulanan' },
+        'simulation': { t: 'Target Keuntungan & Titik Impas (BEP)', st: 'Hitung berapa cup yang wajib laku per hari untuk mencapai target gaji pemilik' },
+      };
+
+      if (titles[tabId]) {
+        document.getElementById('pageTitle').innerText = titles[tabId].t;
+        document.getElementById('pageSubtitle').innerText = titles[tabId].st;
+      }
+
+      if (tabId === 'dashboard') renderDashboard();
+      else if (tabId === 'ingredients') renderIngredientsTable();
+      else if (tabId === 'recipes') renderRecipeView();
+      else if (tabId === 'sales') renderSalesView();
+      else if (tabId === 'simulation') calculateSimulation();
+
+      lucide.createIcons();
+    }
+
+    function renderDashboard() {
+      let totalOmzet = 0;
+      let totalHpp = 0;
+      let totalCups = 0;
+
+      const hpp400 = calculateRecipeHPP('400ml').totalHpp;
+      const hpp500 = calculateRecipeHPP('500ml').totalHpp;
+
+      AppState.sales.forEach(s => {
+        const itemHpp = s.variant.includes('500ml') ? hpp500 : hpp400;
+        totalOmzet += s.qty * s.price;
+        totalHpp += s.qty * itemHpp;
+        totalCups += s.qty;
+      });
+
+      const grossProfit = totalOmzet - totalHpp;
+      const totalFixedExp = Object.values(AppState.expenses).reduce((a, b) => a + b, 0);
+      const netProfit = grossProfit - totalFixedExp;
+      const netMarginPct = totalOmzet > 0 ? (netProfit / totalOmzet) * 100 : 0;
+      const grossMarginPct = totalOmzet > 0 ? (grossProfit / totalOmzet) * 100 : 0;
+
+      // Update KPI DOM
+      document.getElementById('dashTotalOmzet').innerText = formatRp(totalOmzet);
+      document.getElementById('dashTotalHpp').innerText = formatRp(totalHpp);
+      document.getElementById('dashGrossProfit').innerText = formatRp(grossProfit);
+      document.getElementById('dashNetProfit').innerText = formatRp(netProfit);
+      document.getElementById('dashCupSold').innerText = totalCups + ' Cup';
+      document.getElementById('dashHppRatio').innerText = `${((totalHpp/totalOmzet)*100 || 0).toFixed(0)}% dari omzet`;
+      document.getElementById('dashGrossMargin').innerText = 'Margin ' + grossMarginPct.toFixed(1) + '%';
+      document.getElementById('dashNetMargin').innerText = 'Net ' + netMarginPct.toFixed(1) + '%';
+      document.getElementById('sidebarMarginStatus').innerText = `Sehat (${grossMarginPct.toFixed(1)}%)`;
+
+      // Render Category Fruit and Pack Grids matching reference photo
+      renderDashboardGrids();
+
+      // Render Menu Cards
+      const res400 = calculateRecipeHPP('400ml');
+      const res500 = calculateRecipeHPP('500ml');
+
+      const menuHtml = `
+        <div class="p-4 rounded-2xl bg-[#F7FCF9] border border-brand-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-white border border-brand-200 flex items-center justify-center text-xl shadow-sm">
+              🥗
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-800 block">Salad Regular (400ml)</span>
+              <span class="text-[11px] text-slate-500">Modal HPP: <strong class="text-brand-800">${formatRp(res400.totalHpp)}</strong></span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-sm font-black text-brand-900 block">${formatRp(AppState.recipes['400ml'].sellingPrice)}</span>
+            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Untung ${formatRp(AppState.recipes['400ml'].sellingPrice - res400.totalHpp)}</span>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-[#F7FCF9] border border-brand-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-white border border-brand-200 flex items-center justify-center text-xl shadow-sm">
+              🥣
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-800 block">Salad Jumbo (500ml)</span>
+              <span class="text-[11px] text-slate-500">Modal HPP: <strong class="text-brand-800">${formatRp(res500.totalHpp)}</strong></span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-sm font-black text-brand-900 block">${formatRp(AppState.recipes['500ml'].sellingPrice)}</span>
+            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Untung ${formatRp(AppState.recipes['500ml'].sellingPrice - res500.totalHpp)}</span>
+          </div>
+        </div>
+      `;
+      document.getElementById('dashMenuCards').innerHTML = menuHtml;
+
+      // Render Charts
+      renderCostDoughnutChart(res400);
+      renderSalesTrendChart();
+    }
+
+    function renderDashboardGrids() {
+      const fruits = AppState.ingredients.filter(i => i.category === 'Buah Segar').slice(0, 6);
+      const packs = AppState.ingredients.filter(i => i.category !== 'Buah Segar').slice(0, 6);
+
+      let fruitHtml = '';
+      fruits.forEach(f => {
+        fruitHtml += `
+          <div onclick="editIngredient('${f.id}')" class="p-2.5 rounded-2xl bg-[#F8FCF9] border border-surface-border text-center tile-hover cursor-pointer group">
+            <div class="text-2xl mb-1 group-hover:scale-110 transition-transform">${f.emoji || '🥑'}</div>
+            <span class="text-[11px] font-bold text-slate-800 block truncate">${f.name.split(' ')[0]}</span>
+            <span class="text-[10px] text-brand-700 font-semibold">${formatRp(getUnitCost(f))}/${f.unit}</span>
+          </div>
+        `;
+      });
+      document.getElementById('dashFruitGrid').innerHTML = fruitHtml;
+
+      let packHtml = '';
+      packs.forEach(p => {
+        packHtml += `
+          <div onclick="editIngredient('${p.id}')" class="p-2.5 rounded-2xl bg-[#F8FCF9] border border-surface-border text-center tile-hover cursor-pointer group">
+            <div class="text-2xl mb-1 group-hover:scale-110 transition-transform">${p.emoji || '📦'}</div>
+            <span class="text-[11px] font-bold text-slate-800 block truncate">${p.name.split(' ')[0]}</span>
+            <span class="text-[10px] text-brand-700 font-semibold">${formatRp(getUnitCost(p))}/${p.unit}</span>
+          </div>
+        `;
+      });
+      document.getElementById('dashPackGrid').innerHTML = packHtml;
+    }
+
+    function renderCostDoughnutChart(costBreakdown) {
+      const ctx = document.getElementById('costDoughnutChart').getContext('2d');
+      if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+      const fCost = costBreakdown.fruitCost || 4300;
+      const dCost = costBreakdown.dressingCost || 2700;
+      const pCost = costBreakdown.packCost || 1200;
+      const total = fCost + dCost + pCost;
+
+      const fruitPct = Math.round((fCost / total) * 100) || 52;
+      const dressPct = Math.round((dCost / total) * 100) || 33;
+      const packPct = 100 - fruitPct - dressPct;
+
+      document.getElementById('donutFruitPct').innerText = fruitPct + '%';
+      document.getElementById('labelFruitPct').innerText = fruitPct + '%';
+      document.getElementById('barFruitPct').style.width = fruitPct + '%';
+      document.getElementById('labelDressingPct').innerText = dressPct + '%';
+      document.getElementById('barDressingPct').style.width = dressPct + '%';
+      document.getElementById('labelPackPct').innerText = packPct + '%';
+      document.getElementById('barPackPct').style.width = packPct + '%';
+
+      doughnutChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Buah Segar', 'Dressing & Keju', 'Packaging'],
+          datasets: [{
+            data: [fCost, dCost, pCost],
+            backgroundColor: ['#059669', '#F59E0B', '#3B82F6'],
+            borderWidth: 3,
+            borderColor: '#FFFFFF',
+            cutout: '74%',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ' ' + ctx.label + ': ' + formatRp(ctx.raw);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderSalesTrendChart() {
+      const ctx = document.getElementById('salesTrendChart').getContext('2d');
+      if (salesTrendChartInstance) salesTrendChartInstance.destroy();
+
+      const dateMap = {};
+      const hpp400 = calculateRecipeHPP('400ml').totalHpp;
+      const hpp500 = calculateRecipeHPP('500ml').totalHpp;
+
+      AppState.sales.forEach(s => {
+        const d = s.date.slice(5);
+        const itemHpp = s.variant.includes('500ml') ? hpp500 : hpp400;
+        if (!dateMap[d]) dateMap[d] = { omzet: 0, hpp: 0 };
+        dateMap[d].omzet += s.qty * s.price;
+        dateMap[d].hpp += s.qty * itemHpp;
+      });
+
+      const labels = Object.keys(dateMap);
+      const omzetData = labels.map(l => dateMap[l].omzet);
+      const hppData = labels.map(l => dateMap[l].hpp);
+
+      const maxOmzet = omzetData.length ? Math.max(...omzetData) : 0;
+      document.getElementById('dashPeakDayVal').innerText = formatRp(maxOmzet) + ' / hari';
+
+      salesTrendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Omzet Penjualan',
+              data: omzetData,
+              borderColor: '#16A34A',
+              backgroundColor: 'rgba(22, 163, 74, 0.08)',
+              borderWidth: 3,
+              tension: 0.45,
+              fill: true,
+              pointBackgroundColor: '#16A34A',
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+            {
+              label: 'Modal HPP',
+              data: hppData,
+              borderColor: '#3B82F6',
+              backgroundColor: 'transparent',
+              borderWidth: 2.2,
+              tension: 0.45,
+              borderDash: [5, 5],
+              pointBackgroundColor: '#3B82F6',
+              pointRadius: 3,
+              pointHoverRadius: 5,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: '#F1F6F3' },
+              ticks: {
+                font: { size: 9 },
+                callback: function(v) { return 'Rp ' + (v / 1000) + 'k'; }
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 9 } }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(c) { return ' ' + c.dataset.label + ': ' + formatRp(c.raw); }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    let activeCategoryFilter = 'ALL';
+
+    function filterIngredientCategory(cat) {
+      activeCategoryFilter = cat;
+      document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-cat') === cat) {
+          btn.classList.remove('bg-white', 'border', 'border-surface-border', 'text-slate-600', 'hover:bg-brand-50');
+          btn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+        } else {
+          btn.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+          btn.classList.add('bg-white', 'border', 'border-surface-border', 'text-slate-600', 'hover:bg-brand-50');
+        }
+      });
+      renderIngredientsTable();
+    }
+
+    function renderIngredientsTable() {
+      const tbody = document.getElementById('ingredientsTableBody');
+      const filtered = activeCategoryFilter === 'ALL' 
+        ? AppState.ingredients 
+        : AppState.ingredients.filter(i => i.category === activeCategoryFilter);
+
+      let totalInv = 0;
+      let html = '';
+
+      filtered.forEach(ing => {
+        const unitCost = getUnitCost(ing);
+        totalInv += ing.price;
+
+        html += `
+          <tr class="hover:bg-brand-50/50 transition-colors">
+            <td class="py-3 px-4 font-mono text-[11px] font-bold text-slate-400">${ing.id}</td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2.5">
+                <span class="text-xl">${ing.emoji || '🥑'}</span>
+                <div>
+                  <span class="font-bold text-slate-800 block">${ing.name}</span>
+                  <span class="text-[10px] text-slate-400">${ing.desc || '-'}</span>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                ing.category === 'Buah Segar' ? 'bg-emerald-100 text-emerald-800' :
+                ing.category === 'Dressing & Saus' ? 'bg-amber-100 text-amber-800' :
+                ing.category === 'Topping' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+              }">${ing.category}</span>
+            </td>
+            <td class="py-3 px-4 text-center font-medium text-slate-600">${ing.desc}</td>
+            <td class="py-3 px-4 text-right font-medium text-slate-600">${ing.netQty.toLocaleString('id-ID')} ${ing.unit}</td>
+            <td class="py-3 px-4 text-right font-bold text-slate-800">${formatRp(ing.price)}</td>
+            <td class="py-3 px-4 text-right font-black text-brand-900 bg-brand-50/70">${formatRpExact(unitCost)} <span class="text-[10px] font-normal text-slate-500">/${ing.unit}</span></td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="editIngredient('${ing.id}')" class="p-1.5 text-slate-400 hover:text-brand-600 transition-colors" title="Edit">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteIngredient('${ing.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 transition-colors" title="Hapus">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      document.getElementById('ingredientStatsLabel').innerText = `Menampilkan ${filtered.length} item bahan baku aktif`;
+      document.getElementById('totalInventoryCostBadge').innerText = formatRp(totalInv);
+      lucide.createIcons();
+    }
+
+    function openAddIngredientModal() {
+      document.getElementById('ingredientForm').reset();
+      document.getElementById('ingEditId').value = '';
+      document.getElementById('ingredientModalTitle').innerText = 'Tambah Item Bahan Belanjaan';
+      document.getElementById('modalAddIngredient').classList.remove('hidden');
+    }
+
+    function editIngredient(id) {
+      const ing = getIngredientById(id);
+      if (!ing) return;
+      document.getElementById('ingEditId').value = ing.id;
+      document.getElementById('ingName').value = ing.name;
+      document.getElementById('ingCategory').value = ing.category;
+      document.getElementById('ingUnit').value = ing.unit;
+      document.getElementById('ingPurchaseDesc').value = ing.desc;
+      document.getElementById('ingNetQuantity').value = ing.netQty;
+      document.getElementById('ingPrice').value = ing.price;
+      document.getElementById('ingredientModalTitle').innerText = 'Edit Bahan: ' + ing.name;
+      document.getElementById('modalAddIngredient').classList.remove('hidden');
+    }
+
+    function deleteIngredient(id) {
+      const idx = AppState.ingredients.findIndex(i => i.id === id);
+      if (idx !== -1) {
+        const name = AppState.ingredients[idx].name;
+        AppState.ingredients.splice(idx, 1);
+        saveStateToStorage();
+        renderIngredientsTable();
+        showToast(`Bahan "${name}" berhasil dihapus.`);
+      }
+    }
+
+    function saveIngredient(e) {
+      e.preventDefault();
+      const editId = document.getElementById('ingEditId').value;
+      const name = document.getElementById('ingName').value;
+      const category = document.getElementById('ingCategory').value;
+      const unit = document.getElementById('ingUnit').value;
+      const desc = document.getElementById('ingPurchaseDesc').value;
+      const netQty = parseFloat(document.getElementById('ingNetQuantity').value);
+      const price = parseFloat(document.getElementById('ingPrice').value);
+
+      if (editId) {
+        const ing = getIngredientById(editId);
+        if (ing) {
+          ing.name = name;
+          ing.category = category;
+          ing.unit = unit;
+          ing.desc = desc;
+          ing.netQty = netQty;
+          ing.price = price;
+          showToast(`Bahan "${name}" berhasil diperbarui!`);
+        }
+      } else {
+        const nextId = 'B' + String(AppState.ingredients.length + 1).padStart(2, '0');
+        AppState.ingredients.push({
+          id: nextId,
+          name,
+          category,
+          unit,
+          desc,
+          netQty,
+          price,
+          emoji: category === 'Buah Segar' ? '🍎' : category === 'Packaging' ? '🥤' : '🥣'
+        });
+        showToast(`Bahan baru "${name}" berhasil ditambahkan!`);
+      }
+
+      saveStateToStorage();
+      closeModal('modalAddIngredient');
+      renderIngredientsTable();
+      renderDashboard();
+    }
+
+    function selectRecipeVariant(variantKey) {
+      AppState.selectedRecipe = variantKey;
+      saveStateToStorage();
+
+      const btn400 = document.getElementById('btn-recipe-400');
+      const btn500 = document.getElementById('btn-recipe-500');
+
+      if (variantKey === '400ml') {
+        btn400.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition-all bg-brand-600 text-white shadow-sm";
+        btn500.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:bg-white/80";
+      } else {
+        btn500.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition-all bg-brand-600 text-white shadow-sm";
+        btn400.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:bg-white/80";
+      }
+      renderRecipeView();
+    }
+
+    function renderRecipeView() {
+      const res = calculateRecipeHPP(AppState.selectedRecipe);
+      const recipe = AppState.recipes[AppState.selectedRecipe];
+
+      document.getElementById('recipeActiveTitle').innerText = `Komposisi Resep: ${recipe.title}`;
+      document.getElementById('recipeTotalWeightBadge').innerText = `${res.totalWeight} Gram / Cup`;
+      document.getElementById('recipeBadgePorsi').innerText = `Porsi ${AppState.selectedRecipe}`;
+
+      const tbody = document.getElementById('recipeItemsTableBody');
+      let html = '';
+
+      recipe.items.forEach((item, idx) => {
+        const ing = getIngredientById(item.ingId);
+        if (!ing) return;
+        const unitCost = getUnitCost(ing);
+        const subtotal = unitCost * item.qty;
+        const pct = res.rawCost > 0 ? ((subtotal / res.rawCost) * 100).toFixed(1) : 0;
+
+        html += `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-2.5 px-3.5 text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+            <td class="py-2.5 px-3.5">
+              <div class="flex items-center gap-2">
+                <span>${ing.emoji || '🥑'}</span>
+                <span class="font-bold text-slate-800">${ing.name}</span>
+              </div>
+            </td>
+            <td class="py-2.5 px-3.5 text-center font-bold text-slate-700">${item.qty} ${ing.unit}</td>
+            <td class="py-2.5 px-3.5 text-right text-slate-500 font-mono">${formatRpExact(unitCost)}</td>
+            <td class="py-2.5 px-3.5 text-right font-bold text-brand-900">${formatRp(subtotal)}</td>
+            <td class="py-2.5 px-3.5 text-center">
+              <span class="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">${pct}%</span>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+
+      // Update Card Calculations
+      document.getElementById('calcRawCost').innerText = formatRp(res.rawCost);
+      document.getElementById('calcOverheadLabel').innerText = (AppState.overheadPct * 100).toFixed(0) + '%';
+      document.getElementById('calcOverheadCost').innerText = formatRp(res.overhead);
+      document.getElementById('calcTotalHpp').innerText = formatRp(res.totalHpp);
+      document.getElementById('calcSellingPrice').innerText = formatRp(res.roundedPrice);
+      document.getElementById('calcProfitPerCup').innerText = formatRp(res.profit);
+
+      lucide.createIcons();
+    }
+
+    function updateOverheadPct(val) {
+      AppState.overheadPct = parseFloat(val) / 100;
+      document.getElementById('overheadPctLabel').innerText = val + '%';
+      saveStateToStorage();
+      renderRecipeView();
+    }
+
+    function updateMarginTarget(val) {
+      AppState.targetMarginPct = parseFloat(val) / 100;
+      document.getElementById('marginSliderLabel').innerText = val + '%';
+      saveStateToStorage();
+      renderRecipeView();
+    }
+
+    function applySellingPriceToSales() {
+      const res = calculateRecipeHPP(AppState.selectedRecipe);
+      AppState.recipes[AppState.selectedRecipe].sellingPrice = res.roundedPrice;
+      saveStateToStorage();
+      renderRecipeView();
+      renderDashboard();
+      showToast(`Harga jual ${AppState.recipes[AppState.selectedRecipe].title} diatur ke ${formatRp(res.roundedPrice)}`);
+    }
+
+    function openEditRecipeGrammageModal() {
+      const recipe = AppState.recipes[AppState.selectedRecipe];
+      document.getElementById('editGrammageModalTitle').innerText = `Ubah Gramasi: ${recipe.title}`;
+      const container = document.getElementById('editGrammageItemsContainer');
+
+      let html = '';
+      recipe.items.forEach((item, index) => {
+        const ing = getIngredientById(item.ingId);
+        if (!ing) return;
+        html += `
+          <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="text-base">${ing.emoji || '🥑'}</span>
+              <span class="font-bold text-slate-800">${ing.name}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" id="grammage_item_${index}" value="${item.qty}" min="0" step="1" class="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg text-right font-bold text-slate-900" />
+              <span class="text-[11px] text-slate-500 font-semibold">${ing.unit}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      document.getElementById('modalEditGrammage').classList.remove('hidden');
+    }
+
+    function saveEditedGrammage() {
+      const recipe = AppState.recipes[AppState.selectedRecipe];
+      recipe.items.forEach((item, index) => {
+        const el = document.getElementById(`grammage_item_${index}`);
+        if (el) {
+          item.qty = parseFloat(el.value) || 0;
+        }
+      });
+
+      saveStateToStorage();
+      closeModal('modalEditGrammage');
+      renderRecipeView();
+      renderDashboard();
+      showToast("Takaran gramasi resep berhasil disimpan!");
+    }
+
+    function renderSalesView() {
+      const tbody = document.getElementById('salesTableBody');
+      const hpp400 = calculateRecipeHPP('400ml').totalHpp;
+      const hpp500 = calculateRecipeHPP('500ml').totalHpp;
+
+      let totalRevenue = 0;
+      let totalCogs = 0;
+      let html = '';
+
+      AppState.sales.forEach(sale => {
+        const itemHpp = sale.variant.includes('500ml') ? hpp500 : hpp400;
+        const omzet = sale.qty * sale.price;
+        const modal = sale.qty * itemHpp;
+        const gross = omzet - modal;
+
+        totalRevenue += omzet;
+        totalCogs += modal;
+
+        html += `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-4 font-medium text-slate-500">${sale.date}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">${sale.variant}</td>
+            <td class="py-3 px-4 text-center font-bold text-slate-700">${sale.qty} Cup</td>
+            <td class="py-3 px-4 text-right font-medium text-slate-600">${formatRp(sale.price)}</td>
+            <td class="py-3 px-4 text-right font-medium text-slate-500">${formatRp(itemHpp)}</td>
+            <td class="py-3 px-4 text-right font-bold text-slate-900">${formatRp(omzet)}</td>
+            <td class="py-3 px-4 text-right font-semibold text-rose-700">${formatRp(modal)}</td>
+            <td class="py-3 px-4 text-right font-black text-brand-900 bg-brand-50/70">${formatRp(gross)}</td>
+            <td class="py-3 px-4 text-center">
+              <button onclick="deleteSale(${sale.id})" class="p-1 text-slate-400 hover:text-rose-600 transition-colors" title="Hapus">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      document.getElementById('salesTransactionCount').innerText = `Menampilkan ${AppState.sales.length} transaksi`;
+
+      // Detailed P&L statement
+      const grossProfit = totalRevenue - totalCogs;
+      const expListrik = AppState.expenses.electricity;
+      const expEs = AppState.expenses.ice;
+      const expTransport = AppState.expenses.transport;
+      const expInternet = AppState.expenses.internet;
+      const totalFixedExp = expListrik + expEs + expTransport + expInternet;
+      const netProfit = grossProfit - totalFixedExp;
+      const netMarginPct = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
+      const totalCupsSold = AppState.sales.reduce((a, b) => a + b.qty, 0);
+      const avgProfitPerCup = totalCupsSold > 0 ? (netProfit / totalCupsSold) : 0;
+
+      document.getElementById('totalFixedExpenseLabel').innerText = formatRp(totalFixedExp);
+      document.getElementById('plRevenue').innerText = formatRp(totalRevenue);
+      document.getElementById('plCogs').innerText = '- ' + formatRp(totalCogs);
+      document.getElementById('plGross').innerText = formatRp(grossProfit);
+      document.getElementById('plExpElectricity').innerText = '- ' + formatRp(expListrik);
+      document.getElementById('plExpIce').innerText = '- ' + formatRp(expEs);
+      document.getElementById('plExpTransport').innerText = '- ' + formatRp(expTransport);
+      document.getElementById('plExpInternet').innerText = '- ' + formatRp(expInternet);
+      document.getElementById('plTotalExpenses').innerText = '- ' + formatRp(totalFixedExp);
+      document.getElementById('plNetProfit').innerText = formatRp(netProfit);
+      document.getElementById('plNetMarginPct').innerText = netMarginPct + '%';
+      document.getElementById('plAvgProfitPerCup').innerText = formatRp(avgProfitPerCup);
+
+      lucide.createIcons();
+    }
+
+    function openAddSaleModal() {
+      document.getElementById('saleForm').reset();
+      document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
+      syncSalePriceWithVariant();
+      document.getElementById('modalAddSale').classList.remove('hidden');
+    }
+
+    function syncSalePriceWithVariant() {
+      const v = document.getElementById('saleVariant').value;
+      const key = v.includes('500ml') ? '500ml' : '400ml';
+      document.getElementById('salePrice').value = AppState.recipes[key].sellingPrice;
+    }
+
+    function saveSale(e) {
+      e.preventDefault();
+      const date = document.getElementById('saleDate').value;
+      const variant = document.getElementById('saleVariant').value;
+      const qty = parseInt(document.getElementById('saleQty').value);
+      const price = parseFloat(document.getElementById('salePrice').value);
+
+      const nextId = AppState.sales.length ? Math.max(...AppState.sales.map(s => s.id)) + 1 : 1;
+      AppState.sales.unshift({ id: nextId, date, variant, qty, price });
+
+      saveStateToStorage();
+      closeModal('modalAddSale');
+      renderSalesView();
+      renderDashboard();
+      showToast(`Transaksi ${qty} cup ${variant} berhasil dicatat!`);
+    }
+
+    function deleteSale(id) {
+      const idx = AppState.sales.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        AppState.sales.splice(idx, 1);
+        saveStateToStorage();
+        renderSalesView();
+        renderDashboard();
+        showToast("Transaksi berhasil dihapus.");
+      }
+    }
+
+    function openSettingsModal() {
+      document.getElementById('setElectricity').value = AppState.expenses.electricity;
+      document.getElementById('setIce').value = AppState.expenses.ice;
+      document.getElementById('setTransport').value = AppState.expenses.transport;
+      document.getElementById('setInternet').value = AppState.expenses.internet;
+      document.getElementById('modalSettings').classList.remove('hidden');
+    }
+
+    function saveSettings() {
+      AppState.expenses.electricity = parseFloat(document.getElementById('setElectricity').value) || 0;
+      AppState.expenses.ice = parseFloat(document.getElementById('setIce').value) || 0;
+      AppState.expenses.transport = parseFloat(document.getElementById('setTransport').value) || 0;
+      AppState.expenses.internet = parseFloat(document.getElementById('setInternet').value) || 0;
+
+      saveStateToStorage();
+      closeModal('modalSettings');
+      renderSalesView();
+      renderDashboard();
+      showToast("Biaya operasional tetap berhasil diperbarui!");
+    }
+
+    function calculateSimulation() {
+      const targetNetIncome = parseFloat(document.getElementById('simTargetNetIncome').value) || 3000000;
+      const workingDays = parseFloat(document.getElementById('simWorkingDays').value) || 26;
+      const targetVariant = document.getElementById('simTargetVariant').value;
+
+      const res = calculateRecipeHPP(targetVariant);
+      const sellingPrice = AppState.recipes[targetVariant].sellingPrice;
+      const profitPerCup = sellingPrice - res.totalHpp;
+
+      const totalFixedExp = Object.values(AppState.expenses).reduce((a, b) => a + b, 0);
+
+      const totalGrossNeeded = targetNetIncome + totalFixedExp;
+      const totalCupsNeededMonthly = Math.ceil(totalGrossNeeded / (profitPerCup > 0 ? profitPerCup : 1));
+      const dailyCupsNeeded = Math.ceil(totalCupsNeededMonthly / workingDays);
+
+      const dailyRevenueTarget = dailyCupsNeeded * sellingPrice;
+      const monthlyRevenueTarget = totalCupsNeededMonthly * sellingPrice;
+
+      const bepCupsMonthly = Math.ceil(totalFixedExp / (profitPerCup > 0 ? profitPerCup : 1));
+      const bepCupsDaily = Math.ceil(bepCupsMonthly / workingDays);
+
+      document.getElementById('simDailyCupTarget').innerText = `${dailyCupsNeeded} Cup / hari`;
+      document.getElementById('simMonthlyCupTarget').innerText = `${totalCupsNeededMonthly.toLocaleString('id-ID')} Cup / bln`;
+      document.getElementById('simDailyRevenueTarget').innerText = formatRp(dailyRevenueTarget);
+      document.getElementById('simMonthlyRevenueTarget').innerText = formatRp(monthlyRevenueTarget);
+
+      document.getElementById('simBepCups').innerText = `${bepCupsMonthly} Cup`;
+      document.getElementById('simBepDaily').innerText = `${bepCupsDaily} Cup / hari`;
+    }
+
+    function handleGlobalSearch(query) {
+      if (!query) return;
+      const q = query.toLowerCase();
+      if (['melon', 'semangka', 'apel', 'naga', 'keju', 'mayo', 'cup', 'garpu', 'mangga', 'anggur'].some(k => q.includes(k))) {
+        if (AppState.activeTab !== 'ingredients') {
+          switchTab('ingredients');
+        }
+      }
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('customToast');
+      const text = document.getElementById('toastMessage');
+      text.innerText = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    window.onload = function() {
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const today = new Date().toLocaleDateString('id-ID', options);
+      const dateEl = document.getElementById('currentDateBadge');
+      if (dateEl) dateEl.innerText = today;
+
+      // Render initial tab
+      switchTab(AppState.activeTab || 'dashboard');
+    };
+  </script>
+
+</body>
+</html>
